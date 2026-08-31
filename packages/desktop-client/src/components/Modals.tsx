@@ -33,6 +33,7 @@ import { CopyWidgetToDashboardModal } from './modals/CopyWidgetToDashboardModal'
 import { CoverModal } from './modals/CoverModal';
 import { CreateAccountModal } from './modals/CreateAccountModal';
 import { CreateEncryptionKeyModal } from './modals/CreateEncryptionKeyModal';
+import { CreateInviteLink } from './modals/CreateInviteLink';
 import { CreateLocalAccountModal } from './modals/CreateLocalAccountModal';
 import { EditUserAccess } from './modals/EditAccess';
 import { EditFieldModal } from './modals/EditFieldModal';
@@ -424,6 +425,9 @@ export function Modals() {
 
         case 'transfer-ownership':
           return <TransferOwnership key={key} {...modal.options} />;
+
+        case 'create-invite-link':
+          return <CreateInviteLink key={key} {...modal.options} />;
 
         case 'enable-openid':
           return <OpenIDEnableModal key={key} {...modal.options} />;

@@ -157,12 +157,40 @@ function UserAccessContent({ isModal }: ManageUserAccessContentProps) {
           </Text>
         </View>
         <View style={{ flex: 1 }} />
+        <Button
+          onPress={() =>
+            dispatch(
+              pushModal({
+                modal: {
+                  name: 'create-invite-link',
+                  options: { fileId: cloudFileId as string },
+                },
+              }),
+            )
+          }
+          style={{ marginRight: 10 }}
+        >
+          <Trans>Invite by link</Trans>
+        </Button>
         <Search
           placeholder={t('Filter users...')}
           value={filter}
           onChange={onSearchChange}
         />
       </View>
+      <Text
+        style={{
+          ...styles.verySmallText,
+          color: theme.pageTextLight,
+          padding: isModal ? '0 13px 10px' : '0 0 10px',
+        }}
+      >
+        <Trans>
+          Everyone with access to this budget sees the entire budget — Actual
+          does not support restricting individual accounts or categories per
+          member.
+        </Trans>
+      </Text>
       <View style={styles.tableContainer}>
         <UserAccessHeader />
         <InfiniteScrollWrapper loadMore={loadMore}>
