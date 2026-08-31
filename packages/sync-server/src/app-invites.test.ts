@@ -104,6 +104,35 @@ describe('/invites', () => {
       expect(res.statusCode).toEqual(403);
       expect(res.body.reason).toBe('file-denied');
     });
+
+    it('allows a non-owner editor (granted via user_access) to create an invite', async () => {
+      getAccountDb().mutate(
+        'INSERT INTO user_access (user_id, file_id, role) VALUES (?, ?, ?)',
+        [inviteeId, fileId, 'editor'],
+      );
+
+      const res = await request(app)
+        .post('/')
+        .send({ fileId, role: 'viewer' })
+        .set('x-actual-token', inviteeToken);
+
+      expect(res.statusCode).toEqual(200);
+    });
+
+    it('returns 403 for a non-owner viewer (granted via user_access)', async () => {
+      getAccountDb().mutate(
+        'INSERT INTO user_access (user_id, file_id, role) VALUES (?, ?, ?)',
+        [inviteeId, fileId, 'viewer'],
+      );
+
+      const res = await request(app)
+        .post('/')
+        .send({ fileId, role: 'viewer' })
+        .set('x-actual-token', inviteeToken);
+
+      expect(res.statusCode).toEqual(403);
+      expect(res.body.reason).toBe('file-denied');
+    });
   });
 
   describe('GET /invites/:token', () => {

@@ -9,7 +9,8 @@ export type AppConfig = {
   lookbackDays: number;
   /** Where pending/reviewed suggestions are persisted between runs. */
   storePath: string;
-  llm: LlmConfig;
+  /** Only required for `suggest` — `review` never calls the LLM. */
+  llm?: LlmConfig;
 };
 
 export type LlmConfig = {
@@ -22,6 +23,7 @@ export class ConfigError extends Error {}
 
 export function loadConfig(
   env: Record<string, string | undefined> = process.env,
+  { requireLlm = true }: { requireLlm?: boolean } = {},
 ): AppConfig {
   const serverURL = env.ACTUAL_SERVER_URL;
   if (!serverURL) {
@@ -51,10 +53,15 @@ export function loadConfig(
   const aiBaseURL = env.AI_BASE_URL;
   const aiApiKey = env.AI_API_KEY;
   const aiModel = env.AI_MODEL;
-  if (!aiBaseURL || !aiApiKey || !aiModel) {
-    throw new ConfigError(
-      'AI_BASE_URL, AI_API_KEY, and AI_MODEL are all required',
-    );
+
+  let llm: LlmConfig | undefined;
+  if (aiBaseURL || aiApiKey || aiModel || requireLlm) {
+    if (!aiBaseURL || !aiApiKey || !aiModel) {
+      throw new ConfigError(
+        'AI_BASE_URL, AI_API_KEY, and AI_MODEL are all required',
+      );
+    }
+    llm = { baseURL: aiBaseURL, apiKey: aiApiKey, model: aiModel };
   }
 
   return {
@@ -66,10 +73,6 @@ export function loadConfig(
     budgetPassword: env.ACTUAL_BUDGET_PASSWORD,
     lookbackDays,
     storePath: env.AI_CATEGORIZER_STORE_PATH || './ai-categorizer-store.json',
-    llm: {
-      baseURL: aiBaseURL,
-      apiKey: aiApiKey,
-      model: aiModel,
-    },
+    llm,
   };
 }

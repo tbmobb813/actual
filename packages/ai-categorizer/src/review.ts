@@ -36,7 +36,11 @@ async function initApi(config: AppConfig): Promise<void> {
 function describe(suggestion: Suggestion): string {
   return (
     `${suggestion.payeeName} -> ${suggestion.categoryName} ` +
-    `(confidence ${suggestion.confidence.toFixed(2)}). Approve? [y/N/s] `
+    `(confidence ${suggestion.confidence.toFixed(2)}). Approve? ` +
+    // Blank/anything else leaves it pending for a later run — it is a
+    // skip, not a rejection, so the prompt must not imply N is the
+    // default for an empty answer.
+    '[y]es / [n]o / anything else to skip for now: '
   );
 }
 

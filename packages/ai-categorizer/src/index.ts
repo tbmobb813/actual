@@ -8,10 +8,11 @@ import { generateSuggestions } from '#suggest';
 
 async function main() {
   const command = process.argv[2];
-  const config = loadConfig();
+  const config = loadConfig(process.env, { requireLlm: command === 'suggest' });
 
   if (command === 'suggest') {
-    const adapter = createOpenAiCompatibleAdapter(config.llm);
+    // requireLlm was true above, so loadConfig guarantees this is set.
+    const adapter = createOpenAiCompatibleAdapter(config.llm!);
     const created = await generateSuggestions(config, adapter);
     console.log(
       `Generated ${created.length} new suggestion(s) in ${config.storePath}.`,

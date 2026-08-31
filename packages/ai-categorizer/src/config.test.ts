@@ -87,4 +87,37 @@ describe('loadConfig', () => {
       ConfigError,
     );
   });
+
+  describe('requireLlm: false', () => {
+    const envWithoutLlm = {
+      ACTUAL_SERVER_URL: 'https://sync.example.com',
+      ACTUAL_PASSWORD: 'hunter2',
+      ACTUAL_SYNC_ID: 'budget-1',
+    };
+
+    it('does not require AI_* variables', () => {
+      const config = loadConfig(envWithoutLlm, { requireLlm: false });
+
+      expect(config.llm).toBeUndefined();
+    });
+
+    it('still validates AI_* variables together if any are partially set', () => {
+      expect(() =>
+        loadConfig(
+          { ...envWithoutLlm, AI_BASE_URL: 'https://api.example.com' },
+          { requireLlm: false },
+        ),
+      ).toThrow(ConfigError);
+    });
+
+    it('still populates llm when the AI_* variables are present', () => {
+      const config = loadConfig(BASE_ENV, { requireLlm: false });
+
+      expect(config.llm).toEqual({
+        baseURL: 'https://api.openai.com/v1',
+        apiKey: 'sk-test',
+        model: 'gpt-test',
+      });
+    });
+  });
 });

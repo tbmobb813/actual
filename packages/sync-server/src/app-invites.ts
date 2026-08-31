@@ -29,7 +29,11 @@ function hasFileAccess(fileId: string, userId: string): boolean {
   const { granted } = UserService.checkFilePermission(fileId, userId) || {
     granted: 0,
   };
-  return granted !== 0;
+  if (granted !== 0) return true;
+  // checkFilePermission only checks ownership — a non-owner collaborator
+  // with an editor grant in user_access should still be able to invite
+  // others; a viewer should not.
+  return UserService.getFileAccessRole(fileId, userId) === 'editor';
 }
 
 app.post('/', validateSessionMiddleware, (req, res) => {
