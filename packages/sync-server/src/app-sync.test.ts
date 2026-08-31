@@ -532,6 +532,68 @@ describe('/upload-user-file', () => {
     expect(writtenContent).toEqual(fileContent);
   });
 
+  describe('viewer role', () => {
+    afterEach(() => {
+      getAccountDb().mutate('DELETE FROM user_access WHERE user_id = ?', [
+        'genericUser',
+      ]);
+    });
+
+    it('rejects a viewer replacing an existing file', async () => {
+      const fileId = crypto.randomBytes(16).toString('hex');
+      const encryptMeta = JSON.stringify({ keyId: 'key-id' });
+      getAccountDb().mutate(
+        'INSERT INTO files (id, name, deleted, owner, encrypt_meta, encrypt_keyid) VALUES (?, ?, FALSE, ?, ?, ?)',
+        [fileId, 'original-name', OTHER_USER_ID, encryptMeta, 'key-id'],
+      );
+      getAccountDb().mutate(
+        'INSERT INTO user_access (user_id, file_id, role) VALUES (?, ?, ?)',
+        ['genericUser', fileId, 'viewer'],
+      );
+
+      const res = await request(app)
+        .post('/upload-user-file')
+        .set('Content-Type', 'application/encrypted-file')
+        .set('x-actual-token', 'valid-token-user')
+        .set('x-actual-name', 'renamed.txt')
+        .set('x-actual-file-id', fileId)
+        .set('x-actual-encrypt-meta', encryptMeta)
+        .send(Buffer.from('overwritten content'));
+
+      expect(res.statusCode).toEqual(403);
+      expect(res.text).toEqual('file-write-not-allowed');
+    });
+
+    it('allows an editor to replace an existing file', async () => {
+      const fileId = crypto.randomBytes(16).toString('hex');
+      const encryptMeta = JSON.stringify({ keyId: 'key-id' });
+      getAccountDb().mutate(
+        'INSERT INTO files (id, name, deleted, owner, encrypt_meta, encrypt_keyid) VALUES (?, ?, FALSE, ?, ?, ?)',
+        [fileId, 'original-name', OTHER_USER_ID, encryptMeta, 'key-id'],
+      );
+      getAccountDb().mutate(
+        'INSERT INTO user_access (user_id, file_id, role) VALUES (?, ?, ?)',
+        ['genericUser', fileId, 'editor'],
+      );
+      onTestFinished(() => {
+        try {
+          fs.unlinkSync(getPathForUserFile(fileId));
+        } catch {}
+      });
+
+      const res = await request(app)
+        .post('/upload-user-file')
+        .set('Content-Type', 'application/encrypted-file')
+        .set('x-actual-token', 'valid-token-user')
+        .set('x-actual-name', 'renamed.txt')
+        .set('x-actual-file-id', fileId)
+        .set('x-actual-encrypt-meta', encryptMeta)
+        .send(Buffer.from('overwritten content'));
+
+      expect(res.statusCode).toEqual(200);
+    });
+  });
+
   it('uploads and updates an existing file successfully', async () => {
     const fileId = generateFileId();
     const oldGroupId = null; //sync state was reset
@@ -1016,6 +1078,73 @@ describe('/update-user-filename', () => {
       fileId,
     ]);
     expect(rows[0].name).toEqual(newName);
+  });
+
+  describe('viewer role', () => {
+    afterEach(() => {
+      getAccountDb().mutate('DELETE FROM user_access WHERE user_id = ?', [
+        'genericUser',
+      ]);
+    });
+
+    it('rejects a viewer renaming the file', async () => {
+      const fileId = crypto.randomBytes(16).toString('hex');
+      getAccountDb().mutate(
+        'INSERT INTO files (id, name, deleted, owner) VALUES (?, ?, FALSE, ?)',
+        [fileId, 'original-name', OTHER_USER_ID],
+      );
+      getAccountDb().mutate(
+        'INSERT INTO user_access (user_id, file_id, role) VALUES (?, ?, ?)',
+        ['genericUser', fileId, 'viewer'],
+      );
+
+      const res = await request(app)
+        .post('/update-user-filename')
+        .set('x-actual-token', 'valid-token-user')
+        .send({ fileId, name: 'renamed-by-viewer' });
+
+      expect(res.statusCode).toEqual(403);
+      expect(res.text).toEqual('file-write-not-allowed');
+    });
+
+    it('allows an editor to rename the file', async () => {
+      const fileId = crypto.randomBytes(16).toString('hex');
+      getAccountDb().mutate(
+        'INSERT INTO files (id, name, deleted, owner) VALUES (?, ?, FALSE, ?)',
+        [fileId, 'original-name', OTHER_USER_ID],
+      );
+      getAccountDb().mutate(
+        'INSERT INTO user_access (user_id, file_id, role) VALUES (?, ?, ?)',
+        ['genericUser', fileId, 'editor'],
+      );
+
+      const res = await request(app)
+        .post('/update-user-filename')
+        .set('x-actual-token', 'valid-token-user')
+        .send({ fileId, name: 'renamed-by-editor' });
+
+      expect(res.statusCode).toEqual(200);
+    });
+
+    it('rejects a write for an unrecognized role value (fails closed, not open)', async () => {
+      const fileId = crypto.randomBytes(16).toString('hex');
+      getAccountDb().mutate(
+        'INSERT INTO files (id, name, deleted, owner) VALUES (?, ?, FALSE, ?)',
+        [fileId, 'original-name', OTHER_USER_ID],
+      );
+      getAccountDb().mutate(
+        'INSERT INTO user_access (user_id, file_id, role) VALUES (?, ?, ?)',
+        ['genericUser', fileId, 'some-future-role'],
+      );
+
+      const res = await request(app)
+        .post('/update-user-filename')
+        .set('x-actual-token', 'valid-token-user')
+        .send({ fileId, name: 'renamed' });
+
+      expect(res.statusCode).toEqual(403);
+      expect(res.text).toEqual('file-write-not-allowed');
+    });
   });
 });
 

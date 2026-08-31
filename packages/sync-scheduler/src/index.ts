@@ -15,12 +15,31 @@ function logResults(results: SyncResult[]) {
   }
 }
 
+const SHUTDOWN_GRACE_PERIOD_MS = 30_000;
+
+let inFlightTick: Promise<void> | null = null;
+
 async function tick(config: ReturnType<typeof loadConfig>) {
+  const run = (async () => {
+    try {
+      logResults(await runSyncOnce(config));
+    } catch (err) {
+      console.error('Unexpected error running the sync cycle:', err);
+    }
+  })();
+
+  inFlightTick = run;
   try {
-    logResults(await runSyncOnce(config));
-  } catch (err) {
-    console.error('Unexpected error running the sync cycle:', err);
+    await run;
+  } finally {
+    if (inFlightTick === run) {
+      inFlightTick = null;
+    }
   }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function main() {
@@ -38,12 +57,18 @@ async function main() {
     config.intervalMinutes * 60 * 1000,
   );
 
-  const stop = () => {
+  const stop = async () => {
     clearInterval(intervalId);
+    // Let an in-flight sync (and its api.shutdown() cleanup) finish before
+    // exiting, so SIGTERM (e.g. `docker stop`) doesn't kill the process
+    // mid-write and leave a stale lock or corrupted local cache.
+    if (inFlightTick) {
+      await Promise.race([inFlightTick, delay(SHUTDOWN_GRACE_PERIOD_MS)]);
+    }
     process.exit(0);
   };
-  process.on('SIGINT', stop);
-  process.on('SIGTERM', stop);
+  process.on('SIGINT', () => void stop());
+  process.on('SIGTERM', () => void stop());
 }
 
 void main();

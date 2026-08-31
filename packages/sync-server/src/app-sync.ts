@@ -135,13 +135,13 @@ function requireFileAccess(file: File, userId: string) {
   return 'file-access-not-allowed';
 }
 
-function requireFileWriteAccess(file: File, userId: string, hasMessages: boolean) {
+function requireFileWriteAccess(file: File, userId: string, hasWrite: boolean) {
   const accessError = requireFileAccess(file, userId);
   if (accessError) {
     return accessError;
   }
-  if (!hasMessages) {
-    // Nothing being written (a pull-only sync request) — role doesn't matter.
+  if (!hasWrite) {
+    // Nothing being written (e.g. a pull-only sync request) — role doesn't matter.
     return null;
   }
   if (requireFileOwner(file, userId) === null) {
@@ -149,7 +149,10 @@ function requireFileWriteAccess(file: File, userId: string, hasMessages: boolean
     return null;
   }
   const role = UserService.getFileAccessRole(file.id, userId);
-  if (role === 'viewer') {
+  if (role !== 'editor') {
+    // Allow-list, not a deny-list: only an explicit 'editor' grant may
+    // write. Anything else — 'viewer', an unrecognized future role, or no
+    // access row at all — is denied by default rather than by exception.
     return 'file-write-not-allowed';
   }
   return null;
@@ -369,7 +372,7 @@ app.post('/upload-user-file', async (req, res) => {
   }
 
   const fileAccessError = currentFile
-    ? requireFileAccess(currentFile, res.locals.user_id)
+    ? requireFileWriteAccess(currentFile, res.locals.user_id, true)
     : null;
   if (fileAccessError) {
     res.status(403);
@@ -488,7 +491,11 @@ app.post('/update-user-filename', (req, res) => {
     return;
   }
 
-  const fileAccessError = requireFileAccess(file, res.locals.user_id);
+  const fileAccessError = requireFileWriteAccess(
+    file,
+    res.locals.user_id,
+    true,
+  );
   if (fileAccessError) {
     res.status(403);
     res.send(fileAccessError);

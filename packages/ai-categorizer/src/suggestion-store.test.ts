@@ -1,4 +1,10 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -100,5 +106,27 @@ describe('readStore / writeStore', () => {
     writeStore(file, suggestions);
 
     expect(readStore(file)).toEqual(suggestions);
+  });
+
+  it('does not leave a temp file behind after a successful write', () => {
+    const file = path.join(dir, 'store.json');
+
+    writeStore(file, [makeSuggestion()]);
+
+    const entries = readdirSync(dir);
+    expect(entries).toEqual(['store.json']);
+  });
+
+  it('quarantines a corrupt file instead of throwing, and returns an empty array', () => {
+    const file = path.join(dir, 'store.json');
+    writeFileSync(file, '{not valid json');
+
+    const result = readStore(file);
+
+    expect(result).toEqual([]);
+    expect(existsSync(file)).toBe(false);
+    const entries = readdirSync(dir);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatch(/^store\.json\.corrupt-\d+$/);
   });
 });
