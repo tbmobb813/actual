@@ -1,6 +1,7 @@
 export type NewUserAccessEntity = {
   fileId: string;
   userId: string;
+  role?: string;
 };
 
 export type UserAccessEntity = {

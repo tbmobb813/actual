@@ -15,6 +15,7 @@ export type AdminHandlers = {
   'user-add': typeof addUser;
   'user-update': typeof updateUser;
   'access-add': typeof addAccess;
+  'access-update-role': typeof updateAccessRole;
   'access-delete-all': typeof deleteAllAccess;
   'access-get-available-users': typeof accessGetAvailableUsers;
   'transfer-ownership': typeof transferOwnership;
@@ -29,6 +30,7 @@ app.method('user-delete-all', deleteAllUsers);
 app.method('user-add', addUser);
 app.method('user-update', updateUser);
 app.method('access-add', addAccess);
+app.method('access-update-role', updateAccessRole);
 app.method('access-delete-all', deleteAllAccess);
 app.method('access-get-available-users', accessGetAvailableUsers);
 app.method('transfer-ownership', transferOwnership);
@@ -134,6 +136,26 @@ async function addAccess(
   if (userToken) {
     try {
       await post(getServer().BASE_SERVER + '/admin/access/', access, {
+        'X-ACTUAL-TOKEN': userToken,
+      });
+
+      return {};
+    } catch (err) {
+      return { error: err.reason };
+    }
+  }
+
+  return null;
+}
+
+async function updateAccessRole(
+  access: Required<NewUserAccessEntity>,
+): Promise<{ error?: string } | Record<string, never>> {
+  const userToken = await asyncStorage.getItem('user-token');
+
+  if (userToken) {
+    try {
+      await patch(getServer().BASE_SERVER + '/admin/access/', access, {
         'X-ACTUAL-TOKEN': userToken,
       });
 

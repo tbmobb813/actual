@@ -10,6 +10,7 @@ export function UserAccessHeader() {
     <TableHeader>
       <Cell value={t('Access')} width={100} style={{ paddingLeft: 15 }} />
       <Cell value={t('User')} width="flex" />
+      <Cell value={t('Role')} width={120} />
       <Cell value={t('Owner')} width={100} />
     </TableHeader>
   );

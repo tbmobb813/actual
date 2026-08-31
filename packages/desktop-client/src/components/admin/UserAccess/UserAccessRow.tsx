@@ -2,9 +2,11 @@
 import React, { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Select } from '@actual-app/components/select';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
 import { send } from '@actual-app/core/platform/client/connection';
+import { PossibleFileAccessRoles } from '@actual-app/core/shared/user-access';
 import type { UserAvailable } from '@actual-app/core/types/models';
 
 import { Checkbox } from '#components/forms';
@@ -30,6 +32,7 @@ export const UserAccessRow = memo(
     const [marked, setMarked] = useState(
       access.owner === 1 || access.haveAccess === 1,
     );
+    const [role, setRole] = useState(access.role || 'editor');
     const [cloudFileId] = useMetadataPref('cloudFileId');
 
     const handleAccessToggle = async () => {
@@ -38,6 +41,7 @@ export const UserAccessRow = memo(
         const { error } = await send('access-add', {
           fileId: cloudFileId as string,
           userId: access.userId,
+          role,
         });
 
         if (error) {
@@ -65,6 +69,21 @@ export const UserAccessRow = memo(
         }
       }
       setMarked(newValue);
+    };
+
+    const handleRoleChange = async (newRole: string) => {
+      setRole(newRole);
+      if (marked) {
+        const { error } = await send('access-update-role', {
+          fileId: cloudFileId as string,
+          userId: access.userId,
+          role: newRole,
+        });
+
+        if (error) {
+          handleError(error);
+        }
+      }
     };
 
     const handleError = (error: string) => {
@@ -137,6 +156,21 @@ export const UserAccessRow = memo(
             }}
           >
             <span>{access.displayName ?? access.userName}</span>
+          </View>
+        </Cell>
+        <Cell
+          name="role"
+          width={120}
+          plain
+          style={{ color: theme.tableText }}
+        >
+          <View style={{ padding: '0 15px 0 5px' }}>
+            <Select
+              options={Object.entries(PossibleFileAccessRoles)}
+              value={role}
+              disabled={access.owner === 1 || !marked}
+              onChange={handleRoleChange}
+            />
           </View>
         </Cell>
         <Cell

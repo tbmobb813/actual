@@ -387,6 +387,110 @@ describe('/admin', () => {
         expect(res.body.status).toBe('error');
         expect(res.body.reason).toBe('user-already-have-access');
       });
+
+      it('should default the role to editor when none is given', async () => {
+        const newUserAccess = {
+          fileId,
+          userId: testUserId,
+        };
+
+        await request(app)
+          .post('/access')
+          .send(newUserAccess)
+          .set('x-actual-token', sessionToken);
+
+        const { role } = getAccountDb().first(
+          'SELECT role FROM user_access WHERE user_id = ? AND file_id = ?',
+          [testUserId, fileId],
+        );
+        expect(role).toBe('editor');
+      });
+
+      it('should return 400 for an invalid role', async () => {
+        const newUserAccess = {
+          fileId,
+          userId: testUserId,
+          role: 'not-a-real-role',
+        };
+
+        const res = await request(app)
+          .post('/access')
+          .send(newUserAccess)
+          .set('x-actual-token', sessionToken);
+
+        expect(res.statusCode).toEqual(400);
+        expect(res.body.reason).toBe('role-does-not-exists');
+      });
+    });
+
+    describe('PATCH /access', () => {
+      let sessionUserId, testUserId, fileId, sessionToken;
+
+      beforeEach(() => {
+        sessionUserId = uuidv4();
+        testUserId = uuidv4();
+        fileId = uuidv4();
+        sessionToken = generateSessionToken();
+
+        createUser(sessionUserId, 'sessionUser', ADMIN_ROLE);
+        createSession(sessionUserId, sessionToken);
+        createUser(testUserId, 'testUser', ADMIN_ROLE);
+        getAccountDb().mutate('INSERT INTO files (id, owner) VALUES (?, ?)', [
+          fileId,
+          sessionUserId,
+        ]);
+        getAccountDb().mutate(
+          'INSERT INTO user_access (user_id, file_id, role) VALUES (?, ?, ?)',
+          [testUserId, fileId, 'editor'],
+        );
+      });
+
+      afterEach(() => {
+        deleteUser(sessionUserId);
+        deleteUser(testUserId);
+        getAccountDb().mutate('DELETE FROM files WHERE id = ?', [fileId]);
+      });
+
+      it('should return 200 and update the role', async () => {
+        const res = await request(app)
+          .patch('/access')
+          .send({ fileId, userId: testUserId, role: 'viewer' })
+          .set('x-actual-token', sessionToken);
+
+        expect(res.statusCode).toEqual(200);
+        expect(res.body.status).toBe('ok');
+
+        const { role } = getAccountDb().first(
+          'SELECT role FROM user_access WHERE user_id = ? AND file_id = ?',
+          [testUserId, fileId],
+        );
+        expect(role).toBe('viewer');
+      });
+
+      it('should return 400 for an invalid role', async () => {
+        const res = await request(app)
+          .patch('/access')
+          .send({ fileId, userId: testUserId, role: 'not-a-real-role' })
+          .set('x-actual-token', sessionToken);
+
+        expect(res.statusCode).toEqual(400);
+        expect(res.body.reason).toBe('role-does-not-exists');
+      });
+
+      it('should return 404 if the access record does not exist', async () => {
+        const otherUserId = uuidv4();
+        createUser(otherUserId, 'otherUser', ADMIN_ROLE);
+
+        const res = await request(app)
+          .patch('/access')
+          .send({ fileId, userId: otherUserId, role: 'viewer' })
+          .set('x-actual-token', sessionToken);
+
+        expect(res.statusCode).toEqual(404);
+        expect(res.body.reason).toBe('access-not-found');
+
+        deleteUser(otherUserId);
+      });
     });
 
     describe('DELETE /access', () => {
