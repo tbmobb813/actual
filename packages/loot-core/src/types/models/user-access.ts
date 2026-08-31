@@ -9,3 +9,19 @@ export type UserAccessEntity = {
   userName: string;
   fileName: string;
 } & NewUserAccessEntity;
+
+export type InviteEntity = {
+  id: string;
+  fileId: string;
+  createdBy: string;
+  role: string;
+  token: string;
+  expiresAt: number;
+  usedAt: number | null;
+  usedBy: string | null;
+};
+
+export type InvitePreview = {
+  role: string;
+  fileName: string | null;
+};

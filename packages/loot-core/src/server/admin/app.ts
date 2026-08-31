@@ -4,6 +4,8 @@ import { createApp } from '#server/app';
 import { del, get, patch, post } from '#server/post';
 import { getServer } from '#server/server-config';
 import type {
+  InviteEntity,
+  InvitePreview,
   NewUserAccessEntity,
   UserAvailable,
   UserEntity,
@@ -20,6 +22,11 @@ export type AdminHandlers = {
   'access-get-available-users': typeof accessGetAvailableUsers;
   'transfer-ownership': typeof transferOwnership;
   'owner-created': typeof ownerCreated;
+  'invite-create': typeof inviteCreate;
+  'invite-get-preview': typeof inviteGetPreview;
+  'invite-accept': typeof inviteAccept;
+  'invite-get-all': typeof inviteGetAll;
+  'invite-revoke': typeof inviteRevoke;
 };
 
 // Expose functions to the client
@@ -35,6 +42,11 @@ app.method('access-delete-all', deleteAllAccess);
 app.method('access-get-available-users', accessGetAvailableUsers);
 app.method('transfer-ownership', transferOwnership);
 app.method('owner-created', ownerCreated);
+app.method('invite-create', inviteCreate);
+app.method('invite-get-preview', inviteGetPreview);
+app.method('invite-accept', inviteAccept);
+app.method('invite-get-all', inviteGetAll);
+app.method('invite-revoke', inviteRevoke);
 
 async function getUsers() {
   const userToken = await asyncStorage.getItem('user-token');
@@ -260,4 +272,125 @@ async function ownerCreated() {
   }
 
   return null;
+}
+
+async function inviteCreate({
+  fileId,
+  role,
+  expiryDays,
+}: {
+  fileId: string;
+  role?: string;
+  expiryDays?: number;
+}): Promise<{ token: string; expiresAt: number } | { error: string }> {
+  const userToken = await asyncStorage.getItem('user-token');
+
+  if (userToken) {
+    try {
+      const data = await post(
+        getServer().BASE_SERVER + '/invites/',
+        { fileId, role, expiryDays },
+        { 'X-ACTUAL-TOKEN': userToken },
+      );
+      return data as { token: string; expiresAt: number };
+    } catch (err) {
+      return { error: err.reason };
+    }
+  }
+
+  return { error: 'unauthorized' };
+}
+
+async function inviteGetPreview(
+  token: string,
+): Promise<InvitePreview | { error: string }> {
+  const res = await get(
+    getServer().BASE_SERVER + `/invites/${encodeURIComponent(token)}`,
+  );
+
+  if (res) {
+    try {
+      const body = JSON.parse(res);
+      if (body.status === 'ok') {
+        return body.data as InvitePreview;
+      }
+      return { error: body.reason || 'invite-not-found' };
+    } catch (err) {
+      return { error: 'Failed to parse response: ' + err.message };
+    }
+  }
+
+  return { error: 'network-failure' };
+}
+
+async function inviteAccept(
+  token: string,
+): Promise<{ fileId: string } | { error: string }> {
+  const userToken = await asyncStorage.getItem('user-token');
+
+  if (userToken) {
+    try {
+      const data = await post(
+        getServer().BASE_SERVER +
+          `/invites/${encodeURIComponent(token)}/accept`,
+        {},
+        { 'X-ACTUAL-TOKEN': userToken },
+      );
+      return data as { fileId: string };
+    } catch (err) {
+      return { error: err.reason };
+    }
+  }
+
+  return { error: 'unauthorized' };
+}
+
+async function inviteGetAll(
+  fileId: string,
+): Promise<InviteEntity[] | { error: string }> {
+  const userToken = await asyncStorage.getItem('user-token');
+
+  if (userToken) {
+    const res = await get(
+      `${getServer().BASE_SERVER + '/invites'}?fileId=${fileId}`,
+      {
+        headers: {
+          'X-ACTUAL-TOKEN': userToken,
+        },
+      },
+    );
+
+    if (res) {
+      try {
+        return JSON.parse(res) as InviteEntity[];
+      } catch (err) {
+        return { error: 'Failed to parse response: ' + err.message };
+      }
+    }
+  }
+
+  return [];
+}
+
+async function inviteRevoke({
+  id,
+  fileId,
+}: {
+  id: string;
+  fileId: string;
+}): Promise<{ error?: string } | Record<string, never>> {
+  const userToken = await asyncStorage.getItem('user-token');
+
+  if (userToken) {
+    try {
+      await del(getServer().BASE_SERVER + `/invites/${id}?fileId=${fileId}`, {
+        token: userToken,
+      });
+      return {};
+    } catch (err) {
+      return { error: err.reason };
+    }
+  }
+
+  return { error: 'unauthorized' };
 }
