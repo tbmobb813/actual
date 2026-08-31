@@ -176,6 +176,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@actual-app/sync-scheduler@workspace:packages/sync-scheduler":
+  version: 0.0.0-use.local
+  resolution: "@actual-app/sync-scheduler@workspace:packages/sync-scheduler"
+  dependencies:
+    "@actual-app/api": "workspace:*"
+    "@types/node": "npm:^22.20.1"
+    "@typescript/native-preview": "npm:beta"
+    rollup-plugin-visualizer: "npm:^7.0.1"
+    vite: "npm:^8.1.5"
+    vitest: "npm:^4.1.10"
+  bin:
+    actual-sync-scheduler: ./dist/index.js
+  languageName: unknown
+  linkType: soft
+
 "@actual-app/sync-server@workspace:*, @actual-app/sync-server@workspace:packages/sync-server":
   version: 0.0.0-use.local
   resolution: "@actual-app/sync-server@workspace:packages/sync-server"
