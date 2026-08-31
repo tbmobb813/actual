@@ -24,6 +24,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@actual-app/ai-categorizer@workspace:packages/ai-categorizer":
+  version: 0.0.0-use.local
+  resolution: "@actual-app/ai-categorizer@workspace:packages/ai-categorizer"
+  dependencies:
+    "@actual-app/api": "workspace:*"
+    "@types/node": "npm:^22.20.1"
+    "@typescript/native-preview": "npm:beta"
+    rollup-plugin-visualizer: "npm:^7.0.1"
+    vite: "npm:^8.1.5"
+    vitest: "npm:^4.1.10"
+  bin:
+    actual-ai-categorizer: ./dist/index.js
+  languageName: unknown
+  linkType: soft
+
 "@actual-app/api@workspace:*, @actual-app/api@workspace:packages/api":
   version: 0.0.0-use.local
   resolution: "@actual-app/api@workspace:packages/api"
@@ -173,6 +188,21 @@ __metadata:
     uuid: "npm:^14.0.1"
     vite: "npm:^8.1.5"
     vitest: "npm:^4.1.10"
+  languageName: unknown
+  linkType: soft
+
+"@actual-app/sync-scheduler@workspace:packages/sync-scheduler":
+  version: 0.0.0-use.local
+  resolution: "@actual-app/sync-scheduler@workspace:packages/sync-scheduler"
+  dependencies:
+    "@actual-app/api": "workspace:*"
+    "@types/node": "npm:^22.20.1"
+    "@typescript/native-preview": "npm:beta"
+    rollup-plugin-visualizer: "npm:^7.0.1"
+    vite: "npm:^8.1.5"
+    vitest: "npm:^4.1.10"
+  bin:
+    actual-sync-scheduler: ./dist/index.js
   languageName: unknown
   linkType: soft
 

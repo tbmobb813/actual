@@ -2,7 +2,12 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 
-import { create, SyncRequestSchema, toBinary } from '@actual-app/crdt';
+import {
+  create,
+  MessageEnvelopeSchema,
+  SyncRequestSchema,
+  toBinary,
+} from '@actual-app/crdt';
 import request from 'supertest';
 
 import { getAccountDb } from './account-db';
@@ -1556,6 +1561,98 @@ describe('/sync', () => {
     expect(res.statusCode).toEqual(200);
     expect(res.headers['content-type']).toEqual('application/actual-sync');
     expect(res.headers['x-actual-sync-method']).toEqual('simple');
+  });
+
+  describe('viewer role', () => {
+    const setupViewerFile = () => {
+      const fileId = crypto.randomBytes(16).toString('hex');
+      const groupId = 'group-id';
+      const keyId = 'key-id';
+      const syncVersion = 2;
+      const encryptMeta = JSON.stringify({ keyId });
+      addMockFile(
+        fileId,
+        groupId,
+        keyId,
+        encryptMeta,
+        syncVersion,
+        OTHER_USER_ID,
+      );
+      getAccountDb().mutate(
+        'INSERT INTO user_access (user_id, file_id, role) VALUES (?, ?, ?)',
+        ['genericUser', fileId, 'viewer'],
+      );
+      return { fileId, groupId, keyId };
+    };
+
+    afterEach(() => {
+      getAccountDb().mutate('DELETE FROM user_access WHERE user_id = ?', [
+        'genericUser',
+      ]);
+    });
+
+    it('allows a viewer to pull changes (no outgoing messages)', async () => {
+      const { fileId, groupId, keyId } = setupViewerFile();
+      const syncRequest = createMinimalSyncRequest(fileId, groupId, keyId);
+
+      const res = await sendSyncRequest(syncRequest, 'valid-token-user');
+
+      expect(res.statusCode).toEqual(200);
+    });
+
+    it('rejects a viewer trying to push changes', async () => {
+      const { fileId, groupId, keyId } = setupViewerFile();
+      const syncRequest = createMinimalSyncRequest(fileId, groupId, keyId);
+      syncRequest.messages = [
+        create(MessageEnvelopeSchema, {
+          timestamp: '1970-01-01T00:00:00.000Z-0000-genericUser',
+          isEncrypted: false,
+          content: new Uint8Array([1, 2, 3]),
+        }),
+      ];
+
+      const res = await sendSyncRequest(syncRequest, 'valid-token-user');
+
+      expect(res.statusCode).toEqual(403);
+      expect(res.text).toEqual('file-write-not-allowed');
+    });
+
+    it('allows an editor to push changes', async () => {
+      const fileId = crypto.randomBytes(16).toString('hex');
+      const groupId = 'group-id';
+      const keyId = 'key-id';
+      const syncVersion = 2;
+      const encryptMeta = JSON.stringify({ keyId });
+      addMockFile(
+        fileId,
+        groupId,
+        keyId,
+        encryptMeta,
+        syncVersion,
+        OTHER_USER_ID,
+      );
+      getAccountDb().mutate(
+        'INSERT INTO user_access (user_id, file_id, role) VALUES (?, ?, ?)',
+        ['genericUser', fileId, 'editor'],
+      );
+
+      const syncRequest = createMinimalSyncRequest(fileId, groupId, keyId);
+      syncRequest.messages = [
+        create(MessageEnvelopeSchema, {
+          timestamp: '1970-01-01T00:00:00.000Z-0000-genericUser',
+          isEncrypted: false,
+          content: new Uint8Array([1, 2, 3]),
+        }),
+      ];
+
+      const res = await sendSyncRequest(syncRequest, 'valid-token-user');
+
+      expect(res.statusCode).toEqual(200);
+
+      getAccountDb().mutate('DELETE FROM user_access WHERE user_id = ?', [
+        'genericUser',
+      ]);
+    });
   });
 });
 

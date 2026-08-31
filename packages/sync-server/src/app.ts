@@ -13,6 +13,7 @@ import * as akahuApp from './app-akahu/app-akahu.js';
 import * as corsApp from './app-cors-proxy';
 import * as enableBankingApp from './app-enablebanking/app-enablebanking';
 import * as goCardlessApp from './app-gocardless/app-gocardless';
+import * as invitesApp from './app-invites';
 import * as openidApp from './app-openid';
 import * as pluggai from './app-pluggyai/app-pluggyai';
 import * as secretApp from './app-secrets';
@@ -70,6 +71,7 @@ if (config.get('corsProxy.enabled')) {
 }
 
 app.use('/admin', adminApp.handlers);
+app.use('/invites', invitesApp.handlers);
 app.use('/openid', openidApp.handlers);
 
 app.get('/mode', (req, res) => {

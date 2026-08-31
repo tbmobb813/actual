@@ -135,6 +135,26 @@ function requireFileAccess(file: File, userId: string) {
   return 'file-access-not-allowed';
 }
 
+function requireFileWriteAccess(file: File, userId: string, hasMessages: boolean) {
+  const accessError = requireFileAccess(file, userId);
+  if (accessError) {
+    return accessError;
+  }
+  if (!hasMessages) {
+    // Nothing being written (a pull-only sync request) — role doesn't matter.
+    return null;
+  }
+  if (requireFileOwner(file, userId) === null) {
+    // Owners (and server admins, via requireFileOwner) can always write.
+    return null;
+  }
+  const role = UserService.getFileAccessRole(file.id, userId);
+  if (role === 'viewer') {
+    return 'file-write-not-allowed';
+  }
+  return null;
+}
+
 app.post('/sync', async (req, res): Promise<void> => {
   let requestPb;
   try {
@@ -174,7 +194,11 @@ app.post('/sync', async (req, res): Promise<void> => {
     return;
   }
 
-  const fileAccessError = requireFileAccess(currentFile, res.locals.user_id);
+  const fileAccessError = requireFileWriteAccess(
+    currentFile,
+    res.locals.user_id,
+    messages.length > 0,
+  );
   if (fileAccessError) {
     res.status(403);
     res.send(fileAccessError);

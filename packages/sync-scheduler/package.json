@@ -1,0 +1,41 @@
+{
+  "name": "@actual-app/sync-scheduler",
+  "version": "26.8.1",
+  "description": "Headless background bank-sync scheduler for a self-hosted Actual Budget server",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/actualbudget/actual.git",
+    "directory": "packages/sync-scheduler"
+  },
+  "bin": {
+    "actual-sync-scheduler": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "imports": {
+    "#config": "./src/config.ts",
+    "#run-sync": "./src/run-sync.ts"
+  },
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest --run",
+    "typecheck": "tsgo -b",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@actual-app/api": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "@typescript/native-preview": "beta",
+    "rollup-plugin-visualizer": "^7.0.1",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

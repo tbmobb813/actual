@@ -38,6 +38,8 @@ packages/desktop-client/service-worker
 packages/plugins-service/dist
 packages/component-library/dist
 packages/loot-core/lib-dist
+packages/sync-scheduler/dist
+packages/ai-categorizer/dist
 **/.tsbuildinfo
 packages/sync-server/coverage
 bundle.desktop.js

@@ -25,6 +25,7 @@ import { useMetaThemeColor } from '#hooks/useMetaThemeColor';
 import { useDispatch, useSelector } from '#redux';
 import { loggedIn } from '#users/usersSlice';
 
+import { AcceptInvitePage } from './AcceptInvitePage';
 import { BudgetFileSelection } from './BudgetFileSelection';
 import { ConfigServer } from './ConfigServer';
 import { ServerURL } from './ServerURL';
@@ -135,6 +136,7 @@ export function ManagementApp() {
                 <Route path="/config-server" element={<ConfigServer />} />
 
                 <Route path="/change-password" element={<ChangePassword />} />
+                <Route path="/invite/:token" element={<AcceptInvitePage />} />
                 {files && files.length > 0 ? (
                   <Route path="/" element={<BudgetFileSelection />} />
                 ) : (

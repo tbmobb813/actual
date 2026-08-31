@@ -272,7 +272,75 @@ app.post('/access', (req, res) => {
     return;
   }
 
-  UserService.addUserAccess(userAccess.userId, userAccess.fileId);
+  const role = userAccess.role || 'editor';
+  if (!UserService.validateFileAccessRole(role)) {
+    res.status(400).send({
+      status: 'error',
+      reason: 'role-does-not-exists',
+      details: 'Selected role does not exist',
+    });
+    return;
+  }
+
+  UserService.addUserAccess(userAccess.userId, userAccess.fileId, role);
+
+  res.status(200).send({ status: 'ok', data: {} });
+});
+
+app.patch('/access', (req, res) => {
+  const userAccess = req.body || {};
+  const session = validateSession(req, res);
+
+  if (!session) return;
+
+  const { granted } = UserService.checkFilePermission(
+    userAccess.fileId,
+    session.user_id,
+  ) || {
+    granted: 0,
+  };
+
+  if (granted === 0 && !isAdmin(session.user_id)) {
+    res.status(400).send({
+      status: 'error',
+      reason: 'file-denied',
+      details: "You don't have permissions over this file",
+    });
+    return;
+  }
+
+  if (!userAccess.userId || !userAccess.role) {
+    res.status(400).send({
+      status: 'error',
+      reason: 'user-cant-be-empty',
+      details: 'User and role are required',
+    });
+    return;
+  }
+
+  if (!UserService.validateFileAccessRole(userAccess.role)) {
+    res.status(400).send({
+      status: 'error',
+      reason: 'role-does-not-exists',
+      details: 'Selected role does not exist',
+    });
+    return;
+  }
+
+  try {
+    UserService.updateUserAccessRole(
+      userAccess.userId,
+      userAccess.fileId,
+      userAccess.role,
+    );
+  } catch {
+    res.status(404).send({
+      status: 'error',
+      reason: 'access-not-found',
+      details: 'Access not found',
+    });
+    return;
+  }
 
   res.status(200).send({ status: 'ok', data: {} });
 });

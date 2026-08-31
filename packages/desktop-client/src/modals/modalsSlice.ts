@@ -634,6 +634,12 @@ export type Modal =
       };
     }
   | {
+      name: 'create-invite-link';
+      options: {
+        fileId: string;
+      };
+    }
+  | {
       name: 'enable-openid';
       options: {
         onSave?: () => void;
