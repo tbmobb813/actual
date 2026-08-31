@@ -36,6 +36,11 @@ export function validateRole(roleId) {
   return possibleRoles.some(a => a === roleId);
 }
 
+export function validateFileAccessRole(roleId) {
+  const possibleRoles = ['editor', 'viewer'];
+  return possibleRoles.some(a => a === roleId);
+}
+
 export function getOwnerCount(): number {
   const { ownerCount } = getAccountDb().first(
     `SELECT count(*) as ownerCount FROM users WHERE users.user_name <> '' and users.owner = 1`,
@@ -145,13 +150,22 @@ export function updateFileOwner(ownerId, fileId) {
 
 export function getUserAccess(fileId, userId, isAdmin) {
   return getAccountDb().all(
-    `SELECT users.id as userId, user_name as userName, files.owner, display_name as displayName
+    `SELECT users.id as userId, user_name as userName, files.owner, display_name as displayName, user_access.role as role
      FROM users
      JOIN user_access ON user_access.user_id = users.id
      JOIN files ON files.id = user_access.file_id
      WHERE files.id = ? and (files.owner = ? OR 1 = ?)`,
     [fileId, userId, isAdmin ? 1 : 0],
   );
+}
+
+export function getFileAccessRole(fileId, userId) {
+  const { role } =
+    getAccountDb().first(
+      `SELECT role FROM user_access WHERE user_access.file_id = ? AND user_access.user_id = ?`,
+      [fileId, userId],
+    ) || {};
+  return role || null;
 }
 
 export function countUserAccess(fileId, userId) {
@@ -180,9 +194,12 @@ export function checkFilePermission(fileId, userId) {
   );
 }
 
-export function addUserAccess(userId, fileId) {
+export function addUserAccess(userId, fileId, role = 'editor') {
   if (!userId || !fileId) {
     throw new Error('Invalid parameters');
+  }
+  if (!validateFileAccessRole(role)) {
+    throw new Error('Invalid role');
   }
   try {
     const userExists = getUserById(userId);
@@ -191,14 +208,30 @@ export function addUserAccess(userId, fileId) {
       throw new Error('User or file not found');
     }
     getAccountDb().mutate(
-      'INSERT INTO user_access (user_id, file_id) VALUES (?, ?)',
-      [userId, fileId],
+      'INSERT INTO user_access (user_id, file_id, role) VALUES (?, ?, ?)',
+      [userId, fileId, role],
     );
   } catch (error) {
     if (error.message.includes('UNIQUE constraint')) {
       throw new Error('Access already exists');
     }
     throw new Error(`Failed to add user access: ${error.message}`);
+  }
+}
+
+export function updateUserAccessRole(userId, fileId, role) {
+  if (!userId || !fileId) {
+    throw new Error('Invalid parameters');
+  }
+  if (!validateFileAccessRole(role)) {
+    throw new Error('Invalid role');
+  }
+  const result = getAccountDb().mutate(
+    'UPDATE user_access SET role = ? WHERE user_id = ? AND file_id = ?',
+    [role, userId, fileId],
+  );
+  if (result.changes === 0) {
+    throw new Error('Access not found');
   }
 }
 
@@ -242,7 +275,8 @@ export function getAllUserAccess(fileId) {
         user_name     as userName,
         display_name  as displayName,
         CASE WHEN user_access.file_id IS NULL THEN 0 ELSE 1 END as haveAccess,
-        CASE WHEN files.id IS NULL THEN 0 ELSE 1 END as owner
+        CASE WHEN files.id IS NULL THEN 0 ELSE 1 END as owner,
+        user_access.role as role
       FROM users
       ${joinType} user_access ON user_access.file_id = ? AND user_access.user_id = users.id
       ${joinType} files       ON files.id = ? AND files.owner = users.id
