@@ -9,7 +9,8 @@
     { "path": "./packages/sync-server" },
     { "path": "./packages/desktop-electron" },
     { "path": "./packages/cli" },
-    { "path": "./packages/sync-scheduler" }
+    { "path": "./packages/sync-scheduler" },
+    { "path": "./packages/ai-categorizer" }
   ],
   "compilerOptions": {
     "target": "ES2022",

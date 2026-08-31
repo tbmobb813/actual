@@ -1,0 +1,44 @@
+{
+  "name": "@actual-app/ai-categorizer",
+  "version": "26.8.1",
+  "description": "Headless AI transaction-categorization and subscription-suggestion reviewer for Actual Budget",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/actualbudget/actual.git",
+    "directory": "packages/ai-categorizer"
+  },
+  "bin": {
+    "actual-ai-categorizer": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "imports": {
+    "#config": "./src/config.ts",
+    "#llm-adapter": "./src/llm-adapter.ts",
+    "#suggestion-store": "./src/suggestion-store.ts",
+    "#suggest": "./src/suggest.ts",
+    "#review": "./src/review.ts"
+  },
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest --run",
+    "typecheck": "tsgo -b",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@actual-app/api": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "@typescript/native-preview": "beta",
+    "rollup-plugin-visualizer": "^7.0.1",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
