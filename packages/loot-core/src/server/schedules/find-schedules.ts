@@ -40,6 +40,21 @@ async function getTransactions(date, account) {
   return data;
 }
 
+/**
+ * Heuristic guess that a discovered recurring pattern is a subscription
+ * rather than an incidental recurring expense: a fixed (non-approximate)
+ * amount repeating on a weekly, monthly, or yearly cadence.
+ */
+export function isLikelySubscription(winner: {
+  exactAmount: boolean;
+  date: { frequency: string };
+}): boolean {
+  return (
+    winner.exactAmount &&
+    ['weekly', 'monthly', 'yearly'].includes(winner.date.frequency)
+  );
+}
+
 function getRank(day1, day2) {
   const dayDiff = Math.abs(
     d.differenceInDays(parseDate(day1), parseDate(day2)),
@@ -379,6 +394,7 @@ export async function findSchedules() {
             value: winner.amount,
           },
         ],
+        isLikelySubscription: isLikelySubscription(winner),
       };
     },
   );

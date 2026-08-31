@@ -49,4 +49,10 @@ export type DiscoverScheduleEntity = {
   date: RecurConfig;
   amount: ScheduleEntity['_amount'];
   _conditions: ScheduleEntity['_conditions'];
+  /**
+   * Heuristic guess that this recurring pattern is a subscription rather
+   * than an incidental recurring expense: a fixed (non-approximate) amount
+   * repeating weekly, monthly, or yearly.
+   */
+  isLikelySubscription: boolean;
 };

@@ -6,6 +6,7 @@ import { ButtonWithLoading } from '@actual-app/components/button';
 import { Paragraph } from '@actual-app/components/paragraph';
 import { SpaceBetween } from '@actual-app/components/space-between';
 import { styles } from '@actual-app/components/styles';
+import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
 import { send } from '@actual-app/core/platform/client/connection';
@@ -13,6 +14,7 @@ import { q } from '@actual-app/core/shared/query';
 import type { DiscoverScheduleEntity } from '@actual-app/core/types/models';
 
 import { Modal, ModalCloseButton, ModalHeader } from '#components/common/Modal';
+import { LabeledCheckbox } from '#components/forms/LabeledCheckbox';
 import { Field, Row, SelectCell, Table, TableHeader } from '#components/table';
 import { DisplayId } from '#components/util/DisplayId';
 import { useDateFormat } from '#hooks/useDateFormat';
@@ -101,6 +103,22 @@ function DiscoverSchedulesTable({
         <Field width="auto" title={recurDescription} style={{ flex: 1.5 }}>
           {recurDescription}
         </Field>
+        <Field width={110}>
+          {item.isLikelySubscription && (
+            <Text
+              style={{
+                ...styles.verySmallText,
+                color: theme.noticeText,
+                backgroundColor: theme.noticeBackground,
+                borderRadius: 4,
+                padding: '2px 6px',
+                alignSelf: 'flex-start',
+              }}
+            >
+              <Trans>Subscription</Trans>
+            </Text>
+          )}
+        </Field>
         <ScheduleAmountCell amount={item.amount} op={amountOp} />
       </Row>
     );
@@ -125,6 +143,9 @@ function DiscoverSchedulesTable({
         </Field>
         <Field width="auto" style={{ flex: 1.5 }}>
           <Trans>When</Trans>
+        </Field>
+        <Field width={110}>
+          <Trans>Type</Trans>
         </Field>
         <Field width={100} style={{ textAlign: 'right' }}>
           <Trans>Amount</Trans>
@@ -151,7 +172,12 @@ export function DiscoverSchedules() {
 
   const { data, isLoading } = useSendPlatformRequest('schedule/discover');
 
-  const schedules = data || [];
+  const allSchedules = data || [];
+
+  const [subscriptionsOnly, setSubscriptionsOnly] = useState(false);
+  const schedules = subscriptionsOnly
+    ? allSchedules.filter(s => s.isLikelySubscription)
+    : allSchedules;
 
   const [creating, setCreating] = useState(false);
 
@@ -218,6 +244,15 @@ export function DiscoverSchedules() {
               payee.
             </Trans>
           </Paragraph>
+
+          <LabeledCheckbox
+            id="subscriptions-only-field"
+            checked={subscriptionsOnly}
+            onChange={() => setSubscriptionsOnly(value => !value)}
+            style={{ flex: 'initial', marginBottom: 10 }}
+          >
+            <Trans>Show only likely subscriptions</Trans>
+          </LabeledCheckbox>
 
           <SelectedProvider instance={selectedInst}>
             <DiscoverSchedulesTable loading={isLoading} schedules={schedules} />
